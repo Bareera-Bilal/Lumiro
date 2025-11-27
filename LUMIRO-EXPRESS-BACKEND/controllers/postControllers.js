@@ -2,6 +2,9 @@ const { uploadToCloudinary } = require("../config/cloudinary")
 const { Post } = require("../models/post")
 
 
+
+
+
 // CREATE POST
 
 const createPost = async (req, res) => {
@@ -17,20 +20,22 @@ const createPost = async (req, res) => {
 
         await newPost.save()
 
-        return res.status(201).json({ message: "Post created Successfully !" })
+        return res.status(201).json({ message: "POST CREATED SUCCESSFULLY !" })
 
     } catch (error) {
         console.log(error)
-        return res.status(500).json({ message: "Internal Server Error" })
+        return res.status(500).json({ message: "SERVER ERROR" })
 
     }
 }
 
+// CREATE POST ENDED
 
 
 
 
-// REPORT THE Post
+
+// REPORT THE POST
 
 const reportPost = async (req, res) => {
 
@@ -42,7 +47,6 @@ const reportPost = async (req, res) => {
         let post = await Post.findById(postId)
         if (!post) return res.status(404).json({ message: "Post Not found" })
 
-        // Add A NEW REPORT TO THE COMMENT
         comment.reports.push({
             user: userId,
             postId: postId,
@@ -58,10 +62,13 @@ const reportPost = async (req, res) => {
     }
 };
 
+// END OF REPORT THE POST
 
 
 
-// // LIKE POST
+
+
+// LIKE POST
 
 // const likePost = async (res,req) =>
 // {
@@ -88,6 +95,9 @@ const reportPost = async (req, res) => {
 //         console.log(error)
 //     }
 // }
+
+
+
 
 
 // LIKE POST WITH ENHANCEMENT OF THE LOGIC IN WHICH POSTID IS ADDED TO LIKESGIVEN ARRAY OF USER
@@ -153,7 +163,6 @@ const likePost = async (req, res) => {
 
 
 
-
 // // COMMENT ON POST
 
 // const commentOnPost = async (req, res) => {
@@ -182,10 +191,11 @@ const likePost = async (req, res) => {
 
 
 // COMMENT ON POST WITH ENHANCEMENT OF LOGIC IN WHICH POSTID AND COMMENTID IS ADDED TO COMMENTS GIVEN ARRAY OF USER
+
 const commentOnPost = async (req, res) => {
     try {
         const { postId } = req.query;
-        const { userId } = req.user; // assuming middleware attaches user
+        const { userId } = req.user; 
         const { text } = req.body;
 
         // Find post
@@ -209,7 +219,7 @@ const commentOnPost = async (req, res) => {
         // Push comment into post
         post.comments.push(commentOBJ);
 
-        // Get the newly created commentId (last element in array)
+        // Get the newly created commentId 
         const newComment = post.comments[post.comments.length - 1];
         const commentId = newComment._id;
 
@@ -224,11 +234,16 @@ const commentOnPost = async (req, res) => {
         await user.save();
 
         return res.json({ message: "COMMENTED SUCCESSFULLY", commentId });
-    } catch (error) {
+
+    } 
+
+    catch (error) {
         console.error(error);
         return res.status(500).json({ message: "SERVER ERROR" });
     }
 };
+
+// END OF COMMENT ON POST
 
 
 
@@ -245,12 +260,11 @@ const reportComment = async (req, res) => {
         const { text } = req.body
 
         let post = await Post.findById(postId)
-        if (!post) return res.status(404).json({ message: "Post Not found" })
+        if (!post) return res.status(404).json({ message: "POST NOT FOUND" })
 
         const comment = post.comment.id(commentId);
-        if (!comment) return res.status(404).json({ message: "Comment not found" })
+        if (!comment) return res.status(404).json({ message: "COMMENT NOT FOUND" })
 
-        // Add a new report to the comment
         comment.reports.push({
             user: userId,
             text: text,
@@ -259,12 +273,14 @@ const reportComment = async (req, res) => {
 
         await post.save();
 
-        return res.json({ message: "Comment reported successfully!" });
+        return res.json({ message: "COMMENT REPORTED SUCCESSFULLY!" });
     } catch (error) {
         console.error(error);
-        return res.status(500).json({ message: "Server error" });
+        return res.status(500).json({ message: "SERVER ERROR" });
     }
 };
+
+// END OF REPORT THE COMMENT
 
 
 
@@ -281,13 +297,13 @@ const editComment = async (req, res) => {
         const { text } = req.body
 
         let post = await Post.findById(postId)
-        if (!post) return res.status(404).json({ message: "Post Not found" })
+        if (!post) return res.status(404).json({ message: "POST NOT FOUND" })
 
         const comment = post.comment.id(commentId);
-        if (!comment) return res.status(404).json({ message: "Comment not found" })
+        if (!comment) return res.status(404).json({ message: "COMMENT NOT FOUND" })
 
         if (comment.userId !== userId) {
-            return res.status(403).json({ message: "Not authorized to edit this comment" });
+            return res.status(403).json({ message: "NOT AUTHORIZED TO EDIT THE COMMENT" });
         }
 
 
@@ -295,16 +311,57 @@ const editComment = async (req, res) => {
 
         await post.save();
 
-        return res.json({ message: "Comment updated successfully!" });
+        return res.json({ message: "COMMENT UPDATED SUCCESSFULLY!" });
 
 
     } catch (error) {
         console.log(error);
-        return res.status(500).json({ message: "Server error" });
+        return res.status(500).json({ message: "SERVER ERROR" });
 
     }
 
 }
+
+// END OF EDIT THE COMMENT
+
+
+
+
+
+
+// REPLY TO A COMMENT
+
+const replyToComment = async (req, res) => {
+  try {
+    const { commentId } = req.params;   // comment being replied to
+    const { text } = req.body;          // reply text
+    const { userId } = req.user;        // logged-in user
+
+    const comment = await Comment.findById(commentId);
+    if (!comment) {
+      return res.status(404).json({ message: "COMMENT NOT FOUND" });
+    }
+
+    // Add reply to the comment
+    comment.replies.push({ user: userId, text });
+    await comment.save();
+
+    // Save this reply in user's comments array
+    const user = await User.findById(userId);
+    if (user) {
+      user.comments.push(comment._id); 
+      await user.save();
+    }
+
+    res.json({ message: "REPLY ADDED SUCCESSFULLY", comment });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "SERVER ERROR" });
+  }
+};
+
+//END OF REPLY TO COMMENT
+
 
 
 
@@ -313,9 +370,9 @@ const editComment = async (req, res) => {
 
 const reportUser = async (req, res) => {
   try {
-    const { reportedUserId } = req.query;   // user being reported
-    const { userId } = req.user;            // reporter
-    const { reportText } = req.body;        // reason
+    const { reportedUserId } = req.query;   // User being reported
+    const { userId } = req.user;            // Reporter
+    const { reportText } = req.body;        // Reason
 
     // Find reported user
     const reportedUser = await User.findById(reportedUserId);
@@ -357,8 +414,8 @@ const reportUser = async (req, res) => {
     const mailOptions = {
       from: process.env.SMTP_USER,
       to: reportedUser.email,
-      subject: "You have been reported",
-      text: `Hello ${reportedUser.username},\n\nYou have been reported for the following reason:\n"${reportText}"\n\nOur team will review this report.\n\nRegards,\nSupport Team`
+      subject: "YOU HAVE BEEN REPORTED",
+      text: `Hello ${reportedUser.username},\n\nYou have been reported for the following reason:\n"${reportText}"\n\nOur team will review this report.\n\nRegards,\nSupport Team LUMIRO`
     };
 
     await transporter.sendMail(mailOptions);
@@ -370,54 +427,143 @@ const reportUser = async (req, res) => {
   }
 };
 
+// END OF REPORT USER
 
 
 
-// FOLLOW / UNFOLLOW USER (toggle)
+
+
+// FOLLOW / UNFOLLOW USER 
+
 const toggleFollowUser = async (req, res) => {
   try {
-    const { targetUserId } = req.query;   
-    const { userId } = req.user;          
+    const { targetUserId } = req.query;
+    const { userId } = req.user;
 
     if (userId === targetUserId) {
-      return res.status(400).json({ message: "You cannot follow/unfollow yourself" });
+      return res.status(400).json({ message: "YOU CANNOT FOLLOW YOURSELF" });
     }
 
-    const user = await User.findById(userId);
-    const targetUser = await User.findById(targetUserId);
+    const [user, targetUser] = await Promise.all([
+      User.findById(userId),
+      User.findById(targetUserId)
+    ]);
 
     if (!user || !targetUser) {
       return res.status(404).json({ message: "USER NOT FOUND" });
     }
 
-    const alreadyFollowing = user.following.includes(targetUserId);
+    const isFollowing = user.following.includes(targetUserId);
 
-    if (alreadyFollowing) {
-
+    if (isFollowing) {
       // UNFOLLOW
-      user.following = user.following.filter(id => id.toString() !== targetUserId);
-      targetUser.followers = targetUser.followers.filter(id => id.toString() !== userId);
-
-      await user.save();
-      await targetUser.save();
-
-      return res.json({ message: "UNFOLLOWED USER SUCCESSFULLY" });
-    } else {
-        
-      // FOLLOW
-      user.following.push(targetUserId);
-      targetUser.followers.push(userId);
-
-      await user.save();
-      await targetUser.save();
-
-      return res.json({ message: "FOLLOWED USER SUCCESSFULLY" });
+      user.following.pull(targetUserId);
+      targetUser.followers.pull(userId);
+      await Promise.all([user.save(), targetUser.save()]);
+      return res.json({ message: "UNFOLLOWED SUCCESSFULLY" });
     }
+
+    // FOLLOW
+    user.following.push(targetUserId);
+    targetUser.followers.push(userId);
+    await Promise.all([user.save(), targetUser.save()]);
+    return res.json({ message: "FOLLOWED SUCCESSFULLY" });
+
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ message: "SERVER ERROR" });
+    res.status(500).json({ message: "SERVER ERROR" });
   }
 };
 
+// END OF FOLLOW/ UNFOLLOE
 
-module.exports = { createPost, likePost, commentOnPost }
+
+
+
+
+// UPDATE USER BIO
+
+const updateUserBio = async (req, res) => {
+  try {
+    const { userId } = req.user;       
+    const { bio } = req.body;        
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "USER NOT FOUND" });
+    }
+
+    user.bio = bio;                    
+    await user.save();
+
+    return res.json({ message: "BIO UPDATED SUCCESSFULLY", bio: user.bio });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "SERVER ERROR" });
+  }
+};
+
+// END OF UPDTAE USER BIO
+
+
+
+
+
+// UPDATE PROFILE PICTURE
+const uploadProfilePic = async (req, res) => {
+  try {
+    const { userId } = req.user;
+    const fileUrl = req.file?.path; 
+
+    if (!fileUrl) {
+      return res.status(400).json({ message: "NO FILE UPLOADED" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "USER NOT FOUND" });
+
+    user.profilePic = fileUrl;
+    await user.save();
+
+    res.json({ message: "PROFILE PICTURE UPDATED", profilePic: user.profilePic });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "SERVER ERROR" });
+  }
+};
+
+// END OF UPDATE PROFILE PICTURE
+
+
+
+
+
+// UPLOAD MULTIPLE STORIES
+const uploadMultipleStories = async (req, res) => {
+  try {
+    const { userId } = req.user;
+    const files = req.files; 
+
+    if (!files || files.length === 0) {
+      return res.status(400).json({ message: "NO FILE UPLOADED" });
+    }
+
+    const stories = files.map(file => ({
+      user: userId,
+      mediaUrl: file.path
+    }));
+
+    await Story.insertMany(stories);
+
+    res.json({ message: "StORY UPLOADED SUCCESSFULLY", stories });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "SERVER ERROR" });
+  }
+};
+
+// END OF UPLOAD MULTIPLE STORIES
+
+
+// EXPORTING ALL FUNCTIONS 
+module.exports = { createPost, reportPost, likePost, commentOnPost, reportComment, replyToComment, editComment,reportUser, toggleFollowUser, updateUserBio, uploadProfilePic, uploadMultipleStories}

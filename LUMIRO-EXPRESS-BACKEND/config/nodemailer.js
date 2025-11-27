@@ -2,6 +2,7 @@ const nodeMailer = require("nodemailer")
 
 require('dotenv').config()  
 
+
 //TEST ACCOUNT
 const transporter = nodeMailer.createTransport({
     host : process.env.SMTP_HOST,

@@ -6,6 +6,10 @@ const { transporter } = require("../config/nodemailer")
 require('dotenv').config()
 
 
+
+
+// REGISTER HANDLER 
+
 const registerHandler = async (req, res) => {
 
     try {
@@ -28,12 +32,14 @@ const registerHandler = async (req, res) => {
         await User.create({ email, username, password: encryptPass })
 
         const mailOptions = {
-
-            from:"maddison53@ethereal.email",
+            from: process.env.SMTP_USER,
             to: email,
-            subject: "Registration Succesfull",
-            html: "<h2> Welcome TO LUMIRO  - GLOW IN YOUR WAY </h2>"
-        }
+            subject: "Registration Successful",
+            text: "Welcome to LUMIRO - Glow in Your Way", 
+            html: `<h2>Welcome to LUMIRO - Glow in Your Way</h2>
+                   <p>We’re excited to have you join our community!</p>`
+        };
+
 
         await transporter.sendMail(mailOptions)
 
@@ -48,6 +54,12 @@ const registerHandler = async (req, res) => {
     }
 }
 
+// END OF REGISTER HANDLER 
+
+
+
+
+// LOGIN HANDLER
 
 const loginhandler = async (req, res) => {
 
@@ -86,10 +98,14 @@ const loginhandler = async (req, res) => {
         return res.status(500).json({ message: "INTERNAL SERVER ERROR" })
     }
 
-
-
 }
 
+// END OF LOGIN HANDLER
+
+
+
+
+// FETCH USER HANDLER
 
 const fetchUserhandler = async (req, res) => {
     try {
@@ -99,7 +115,7 @@ const fetchUserhandler = async (req, res) => {
 
         let { userId } = req.user
 
-        let user = await User.findById(userId) 
+        let user = await User.findById(userId)
 
         if (user !== null) {
             return res.status(200).json({ message: "1 user Found !", payload: user })
@@ -112,6 +128,8 @@ const fetchUserhandler = async (req, res) => {
     }
 
 }
+
+// END OF FETCH USER HANDLER
 
 
 module.exports = { registerHandler, loginhandler, fetchUserhandler }
