@@ -7,7 +7,7 @@ const { Post } = require("../models/post")
 
 // CREATE POST
 
-const createPost = async (req, res) => {
+exports.createPost = async (req, res) => {
     try {
 
         const { postCaption } = req.body
@@ -34,35 +34,6 @@ const createPost = async (req, res) => {
 
 
 
-
-// REPORT THE POST
-
-const reportPost = async (req, res) => {
-
-    try {
-
-        const { postId } = req.query
-        const { userId } = req.user
-
-        let post = await Post.findById(postId)
-        if (!post) return res.status(404).json({ message: "Post Not found" })
-
-        comment.reports.push({
-            user: userId,
-            postId: postId,
-            reportedAt: new Date()
-        });
-
-        await post.save();
-
-        return res.json({ message: "Post reported successfully!" });
-    } catch (error) {
-        console.error(error);
-        return res.status(500).json({ message: "Server error" });
-    }
-};
-
-// END OF REPORT THE POST
 
 
 
@@ -103,7 +74,7 @@ const reportPost = async (req, res) => {
 // LIKE POST WITH ENHANCEMENT OF THE LOGIC IN WHICH POSTID IS ADDED TO LIKESGIVEN ARRAY OF USER
 
 // LIKE POST
-const likePost = async (req, res) => {
+exports.likePost = async (req, res) => {
     try {
         const { postId } = req.query;
         const { userId } = req; 
@@ -192,7 +163,44 @@ const likePost = async (req, res) => {
 
 // COMMENT ON POST WITH ENHANCEMENT OF LOGIC IN WHICH POSTID AND COMMENTID IS ADDED TO COMMENTS GIVEN ARRAY OF USER
 
-const commentOnPost = async (req, res) => {
+
+
+
+
+// REPORT THE POST
+
+exports.reportPost = async (req, res) => {
+
+    try {
+
+        const { postId } = req.query
+        const { userId } = req.user
+
+        let post = await Post.findById(postId)
+        if (!post) return res.status(404).json({ message: "Post Not found" })
+
+        comment.reports.push({
+            user: userId,
+            postId: postId,
+            reportedAt: new Date()
+        });
+
+        await post.save();
+
+        return res.json({ message: "Post reported successfully!" });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: "Server error" });
+    }
+};
+
+// END OF REPORT THE POST
+
+
+
+
+
+exports.commentOnPost = async (req, res) => {
     try {
         const { postId } = req.query;
         const { userId } = req.user; 
@@ -251,7 +259,7 @@ const commentOnPost = async (req, res) => {
 
 // REPORT THE COMMENT 
 
-const reportComment = async (req, res) => {
+exports.reportComment = async (req, res) => {
 
     try {
 
@@ -288,7 +296,7 @@ const reportComment = async (req, res) => {
 
 // EDIT THE COMMENT
 
-const editComment = async (req, res) => {
+exports.editComment = async (req, res) => {
 
     try {
 
@@ -331,7 +339,7 @@ const editComment = async (req, res) => {
 
 // REPLY TO A COMMENT
 
-const replyToComment = async (req, res) => {
+exports.replyToComment = async (req, res) => {
   try {
     const { commentId } = req.params;   // comment being replied to
     const { text } = req.body;          // reply text
@@ -366,185 +374,20 @@ const replyToComment = async (req, res) => {
 
 
 
-// REPORT USER
+// UPLOAD SINGLE OR MULTIPLE STORIES
 
-const reportUser = async (req, res) => {
-  try {
-    const { reportedUserId } = req.query;   // User being reported
-    const { userId } = req.user;            // Reporter
-    const { reportText } = req.body;        // Reason
-
-    // Find reported user
-    const reportedUser = await User.findById(reportedUserId);
-    if (!reportedUser) {
-      return res.status(404).json({ message: "REPORTED USER NOT FOUND" });
-    }
-
-    // Create report object
-    const reportObj = {
-      reporterId: userId,
-      reportedUserId,
-      reportText,
-      createdAt: new Date()
-    };
-
-    // Save report 
-    const report = new Report(reportObj);
-    await report.save();
-
-    // Optionally track in reporter’s profile
-    const reporter = await User.findById(userId);
-    if (reporter) {
-      reporter.reportsGiven.push({
-        reportedUserId,
-        reportId: report._id
-      });
-      await reporter.save();
-    }
-
-    // Send email to reported user
-    const transporter = nodemailer.createTransport({
-      service: "gmail", 
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS
-      }
-    });
-
-    const mailOptions = {
-      from: process.env.SMTP_USER,
-      to: reportedUser.email,
-      subject: "YOU HAVE BEEN REPORTED",
-      text: `Hello ${reportedUser.username},\n\nYou have been reported for the following reason:\n"${reportText}"\n\nOur team will review this report.\n\nRegards,\nSupport Team LUMIRO`
-    };
-
-    await transporter.sendMail(mailOptions);
-
-    return res.json({ message: "USER REPORTED AND MAIL SENT SUCCESSFULLY" });
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: "SERVER ERROR" });
-  }
-};
-
-// END OF REPORT USER
-
-
-
-
-
-// FOLLOW / UNFOLLOW USER 
-
-const toggleFollowUser = async (req, res) => {
-  try {
-    const { targetUserId } = req.query;
-    const { userId } = req.user;
-
-    if (userId === targetUserId) {
-      return res.status(400).json({ message: "YOU CANNOT FOLLOW YOURSELF" });
-    }
-
-    const [user, targetUser] = await Promise.all([
-      User.findById(userId),
-      User.findById(targetUserId)
-    ]);
-
-    if (!user || !targetUser) {
-      return res.status(404).json({ message: "USER NOT FOUND" });
-    }
-
-    const isFollowing = user.following.includes(targetUserId);
-
-    if (isFollowing) {
-      // UNFOLLOW
-      user.following.pull(targetUserId);
-      targetUser.followers.pull(userId);
-      await Promise.all([user.save(), targetUser.save()]);
-      return res.json({ message: "UNFOLLOWED SUCCESSFULLY" });
-    }
-
-    // FOLLOW
-    user.following.push(targetUserId);
-    targetUser.followers.push(userId);
-    await Promise.all([user.save(), targetUser.save()]);
-    return res.json({ message: "FOLLOWED SUCCESSFULLY" });
-
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "SERVER ERROR" });
-  }
-};
-
-// END OF FOLLOW/ UNFOLLOE
-
-
-
-
-
-// UPDATE USER BIO
-
-const updateUserBio = async (req, res) => {
-  try {
-    const { userId } = req.user;       
-    const { bio } = req.body;        
-
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({ message: "USER NOT FOUND" });
-    }
-
-    user.bio = bio;                    
-    await user.save();
-
-    return res.json({ message: "BIO UPDATED SUCCESSFULLY", bio: user.bio });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "SERVER ERROR" });
-  }
-};
-
-// END OF UPDTAE USER BIO
-
-
-
-
-
-// UPDATE PROFILE PICTURE
-const uploadProfilePic = async (req, res) => {
+exports.uploadStories = async (req, res) => {
   try {
     const { userId } = req.user;
-    const fileUrl = req.file?.path; 
 
-    if (!fileUrl) {
-      return res.status(400).json({ message: "NO FILE UPLOADED" });
-    }
+    // Handle both single and multiple uploads
+    const files = req.files && req.files.length > 0 
+      ? req.files 
+      : req.file 
+        ? [req.file] 
+        : [];
 
-    const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ message: "USER NOT FOUND" });
-
-    user.profilePic = fileUrl;
-    await user.save();
-
-    res.json({ message: "PROFILE PICTURE UPDATED", profilePic: user.profilePic });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "SERVER ERROR" });
-  }
-};
-
-// END OF UPDATE PROFILE PICTURE
-
-
-
-
-
-// UPLOAD MULTIPLE STORIES
-const uploadMultipleStories = async (req, res) => {
-  try {
-    const { userId } = req.user;
-    const files = req.files; 
-
-    if (!files || files.length === 0) {
+    if (files.length === 0) {
       return res.status(400).json({ message: "NO FILE UPLOADED" });
     }
 
@@ -553,17 +396,20 @@ const uploadMultipleStories = async (req, res) => {
       mediaUrl: file.path
     }));
 
+    // Insert stories into DB
     await Story.insertMany(stories);
 
-    res.json({ message: "StORY UPLOADED SUCCESSFULLY", stories });
+    res.json({ 
+      message: "STORY UPLOADED SUCCESSFULLY", 
+      count: stories.length, 
+      stories 
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "SERVER ERROR" });
   }
 };
 
-// END OF UPLOAD MULTIPLE STORIES
+// END OF UPLOAD SINGLE OR MULTIPLE STORIES
 
 
-// EXPORTING ALL FUNCTIONS 
-module.exports = { createPost, reportPost, likePost, commentOnPost, reportComment, replyToComment, editComment,reportUser, toggleFollowUser, updateUserBio, uploadProfilePic, uploadMultipleStories}

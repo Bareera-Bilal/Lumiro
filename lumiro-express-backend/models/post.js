@@ -5,7 +5,7 @@ const mongoose = require("mongoose");
 
 // POST SCHEMA
 
-const postSchema = new mongoose.Schema({
+exports.postSchema = new mongoose.Schema({
   postPicUrl: { type: String },
   postCaption: { type: String },
   userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
@@ -41,7 +41,7 @@ const postSchema = new mongoose.Schema({
 
 // COMMENT SCHEMA
 
-const commentSchema = new mongoose.Schema({
+exports.commentSchema = new mongoose.Schema({
   text: { type: String, required: true },
   userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   postId: { type: mongoose.Schema.Types.ObjectId, ref: "Post", required: true },
@@ -66,7 +66,7 @@ const commentSchema = new mongoose.Schema({
 
 // REPORT SCHEMA
 
-const reportSchema = new mongoose.Schema({
+exports.reportSchema = new mongoose.Schema({
   reporterId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   reportedUserId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   reportText: { type: String, required: true },
@@ -80,7 +80,7 @@ const reportSchema = new mongoose.Schema({
 
 // STORY SCHEMA
 
-const storySchema = new mongoose.Schema({
+exports.storySchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   mediaUrl: { type: String, required: true },
   createdAt: { type: Date, default: Date.now },
@@ -89,13 +89,12 @@ const storySchema = new mongoose.Schema({
 
 // END OF STORY SCHEMA
 
+// CREATE MODELS
+const Post = mongoose.model("Post", exports.postSchema);
+const Comment = mongoose.model("Comment", exports.commentSchema);
+const PostReport = mongoose.model("PostReport", exports.reportSchema);
+const Story = mongoose.model("Story", exports.storySchema);
 
+// EXPORT MODELS
+module.exports = { Post, Comment, PostReport, Story };
 
-
-// Models
-const Post = mongoose.model("Post", postSchema);
-const Comment = mongoose.model("Comment", commentSchema);
-const Report = mongoose.model("Report", reportSchema);
-const Story = mongoose.model("Story", storySchema);
-
-module.exports = { Post, Comment, Report, Story };

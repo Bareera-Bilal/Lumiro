@@ -1,36 +1,229 @@
-// IMPORTING
+// ======================= IMPORTS =======================
 
-const express = require("express")   
-const connectDb = require("./config/connectDB")  
-const { registerHandler, loginhandler, fetchUserhandler } = require("./controllers/userController")
-const bodyParser = require("body-parser")
-const cors = require("cors")
-const isAuth = require("./middlewares/IsAuthorised")
-const { createPost, likePost, commentOnPost } = require("./controllers/postControllers")
-const multMid = require("./middlewares/multer")
-const app = express()
-const port  = 6000
+const express = require("express");
+const connectDb = require("./config/connectDB");
+const bodyParser = require("body-parser");
+const cors = require("cors");
+
+const isAuth = require("./middlewares/isAuthorised");
+const multMid = require("./middlewares/multer");
+
+const {
+  registerHandler,
+  loginHandler,
+  fetchUserHandler,
+  reportUser,
+  toggleFollowUser,
+  updateUserBio,
+  uploadProfilePic,
+} = require("./controllers/userController");
+
+const {
+  createPost,
+  likePost,
+  commentOnPost,
+  reportPost,
+  reportComment,
+  editComment,
+  replyToComment,
+  uploadStories,
+} = require("./controllers/postControllers");
+
+const app = express();
+const port = 4000;
+
+// ======================= DATABASE CONNECTION =======================
+
+connectDb();
+
+// ======================= MIDDLEWARES =======================
+
+app.use(bodyParser.json());
+app.use(cors()); // Enables CORS for all routes
+
+// ======================= ROUTES =======================
+
+// ---------- Root ----------
+app.get("/", (req, res) => {
+  res.send("Hello from the server");
+});
+
+// ---------- User Authentication ----------
+app.post("/user/register", registerHandler);
+app.post("/user/login", loginHandler);
+app.get("/user/verify", isAuth, fetchUserHandler);
+
+// ---------- User Interaction ----------
+app.post("/user/report", isAuth, reportUser);
+app.post("/user/friends", isAuth, toggleFollowUser);
+
+// ---------- User Profile ----------
+app.put("/user/bio", isAuth, updateUserBio); // Update bio
+app.put("/user/profilepic", isAuth, uploadProfilePic); // Update profile picture
+
+// ---------- Post Management ----------
+app.post("/posts/create", isAuth, multMid, createPost); // Create post
+app.post("/posts/:id/like", isAuth, likePost); // Like post
+app.post("/posts/:id/report", isAuth, reportPost); // Report post
+
+// ---------- Comment Management ----------
+app.post("/posts/:id/comments", isAuth, commentOnPost); // Add comment
+app.post("/comments/:id/report", isAuth, reportComment); // Report comment
+app.put("/comments/:id", isAuth, editComment); // Edit comment
+app.post("/comments/:id/replies", isAuth, replyToComment); // Reply to comment
+
+// ---------- Stories ----------
+app.post("/stories", isAuth, uploadStories); // Upload story
+
+// ======================= SERVER LISTEN =======================
+
+app.listen(port, () => {
+  console.log(`Server listening on port ${port}`);
+});
 
 
-connectDb()
-
-
-// MIDDLEWARES
-app.use(bodyParser.json())
-app.use(cors())   // READY MAKE CORS POLICY USED IN MIDDLEWARE
-
-
-// WE HAVE TO DO MANUAL WRITING ROUTING IN EXPRESS
-
-app.get("/" , (req,res)=>{res.send("hello from the server ")  })
-app.post("/user/register" , registerHandler )
-app.post("/user/login" , loginhandler )
-app.get("/user/verify" ,  isAuth,   fetchUserhandler)
-app.get("/user/bio" , isAuth , ()=>{})
-app.post("/post/create" ,isAuth, multMid  , createPost )
-app.get("/post/like" , isAuth , likePost)     
-app.post("/post/comment" , isAuth , commentOnPost)  
 
 
 
-app.listen(port  , ()=>{console.log("server listening on port 6000")} )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// // IMPORTING
+// const express = require("express");
+// const connectDb = require("./config/connectDB");
+// const bodyParser = require("body-parser");
+// const cors = require("cors");
+// const isAuth = require("./middlewares/IsAuthorised");
+// const multMid = require("./middlewares/multer");
+
+// // // Controllers
+// // const userController = require("./controllers/userController");
+// // const postController = require("./controllers/postControllers");
+// // const commentController = require("./controllers/commentControllers");
+// // const reportController = require("./controllers/reportControllers");
+// // const followController = require("./controllers/followControllers");
+// // const storyController = require("./controllers/storyControllers");
+
+// // Controllers
+// const userController = require("./controllers/userController");
+// const postController = require("./controllers/postController");
+
+// const app = express();
+// const port = 6000;
+
+// // DATABASE
+// connectDb();
+
+// // MIDDLEWARES
+// app.use(bodyParser.json());
+// app.use(cors());
+
+// // ROUTES
+// app.get("/", (req, res) => res.send("hello from the server"));
+
+// // // User
+// // app.post("/user/register", userController.registerHandler);
+// // app.post("/user/login", userController.loginhandler);
+// // app.get("/user/verify", isAuth, userController.fetchUserhandler);
+// // app.get("/user/bio", isAuth, userController.reportUser);
+// // app.put("/user/update", isAuth, userController.updateUserHandler);
+// // app.put("/user/bio", isAuth, userController.updateUserBio);
+// // app.post("/user/profile-pic", isAuth, multMid, userController.uploadProfilePic);
+
+// // // Follow/Unfollow
+// // app.post("/user/follow/:id", isAuth, userController.toggleFollowUser);
+// // app.post("/user/unfollow/:id", isAuth, followController.unfollowUser);
+// // User
+// app.post("/user/register", userController.registerHandler);
+// app.post("/user/login", userController.loginhandler);
+// app.get("/user/verify", isAuth, userController.fetchUserhandler);
+
+// // Report user (should be POST, not GET)
+// app.post("/user/report", isAuth, userController.reportUser);
+
+// // Update bio
+// app.put("/user/bio", isAuth, userController.updateUserBio);
+
+// // Upload profile picture
+// app.post("/user/profile-pic", isAuth, multMid, userController.uploadProfilePic);
+
+// // Follow/Unfollow (toggle in one handler)
+// app.post("/user/follow/:id", isAuth, userController.toggleFollowUser);
+// app.post("/user/unfollow/:id", isAuth, userController.toggleFollowUser);
+// ``
+
+
+
+
+
+
+
+
+
+
+
+
+// // Posts
+// app.post("/post/create", isAuth, multMid, postController.createPost);
+// app.get("/post/like/:id", isAuth, postController.likePost);
+// app.post("/post/comment", isAuth, commentController.commentOnPost);
+// app.post("/post/reply-comment", isAuth, commentController.replyOnComment);
+
+// // Stories
+// app.post("/story/upload", isAuth, multMid, storyController.uploadStory);
+// app.post("/story/upload-multiple", isAuth, multMid.array("stories", 10), storyController.uploadMultipleStories);
+
+// // Reporting
+// app.post("/report/user/:id", isAuth, reportController.reportUser);
+// app.post("/report/post/:id", isAuth, reportController.reportPost);
+// app.post("/report/comment/:id", isAuth, reportController.reportComment);
+
+// // SERVER
+// app.listen(port, () => {
+//     console.log("Server listening on port " + port);
+// });

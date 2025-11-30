@@ -1,6 +1,6 @@
 const e = require("express")
 const { User } = require("../models/user")
-const bcrypt = require("bcrypt")
+const bcrypt = require('bcryptjs');
 const jwt = require("jsonwebtoken")
 const { transporter } = require("../config/nodemailer")
 require('dotenv').config()
@@ -10,7 +10,7 @@ require('dotenv').config()
 
 // REGISTER HANDLER 
 
-const registerHandler = async (req, res) => {
+exports.registerHandler = async (req, res) => {
 
     try {
 
@@ -61,7 +61,7 @@ const registerHandler = async (req, res) => {
 
 // LOGIN HANDLER
 
-const loginhandler = async (req, res) => {
+exports.loginHandler = async (req, res) => {
 
     try {
 
@@ -107,7 +107,7 @@ const loginhandler = async (req, res) => {
 
 // FETCH USER HANDLER
 
-const fetchUserhandler = async (req, res) => {
+exports.fetchUserHandler = async (req, res) => {
     try {
 
 
@@ -132,4 +132,180 @@ const fetchUserhandler = async (req, res) => {
 // END OF FETCH USER HANDLER
 
 
-module.exports = { registerHandler, loginhandler, fetchUserhandler }
+
+
+// REPORT USER
+
+exports.reportUser = async (req, res) => {
+  try {
+    const { reportedUserId } = req.query;   // User being reported
+    const { userId } = req.user;            // Reporter
+    const { reportText } = req.body;        // Reason
+
+    // Find reported user
+    const reportedUser = await User.findById(reportedUserId);
+    if (!reportedUser) {
+      return res.status(404).json({ message: "REPORTED USER NOT FOUND" });
+    }
+
+    // Create report object
+    const reportObj = {
+      reporterId: userId,
+      reportedUserId,
+      reportText,
+      createdAt: new Date()
+    };
+
+    // Save report 
+    const report = new Report(reportObj);
+    await report.save();
+
+    // Optionally track in reporter’s profile
+    const reporter = await User.findById(userId);
+    if (reporter) {
+      reporter.reportsGiven.push({
+        reportedUserId,
+        reportId: report._id
+      });
+      await reporter.save();
+    }
+
+    // Send email to reported user
+    const transporter = nodemailer.createTransport({
+      service: "gmail", 
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS
+      }
+    });
+
+    const mailOptions = {
+      from: process.env.SMTP_USER,
+      to: reportedUser.email,
+      subject: "YOU HAVE BEEN REPORTED",
+      text: `Hello ${reportedUser.username},\n\nYou have been reported for the following reason:\n"${reportText}"\n\nOur team will review this report.\n\nRegards,\nSupport Team LUMIRO`
+    };
+
+    await transporter.sendMail(mailOptions);
+
+    return res.json({ message: "USER REPORTED AND MAIL SENT SUCCESSFULLY" });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "SERVER ERROR" });
+  }
+};
+
+// END OF REPORT USER
+
+
+
+
+
+
+// FOLLOW / UNFOLLOW USER 
+
+exports.toggleFollowUser = async (req, res) => {
+  try {
+    const { targetUserId } = req.query;
+    const { userId } = req.user;
+
+    if (userId === targetUserId) {
+      return res.status(400).json({ message: "YOU CANNOT FOLLOW YOURSELF" });
+    }
+
+    const [user, targetUser] = await Promise.all([
+      User.findById(userId),
+      User.findById(targetUserId)
+    ]);
+
+    if (!user || !targetUser) {
+      return res.status(404).json({ message: "USER NOT FOUND" });
+    }
+
+    const isFollowing = user.following.includes(targetUserId);
+
+    if (isFollowing) {
+      // UNFOLLOW
+      user.following.pull(targetUserId);
+      targetUser.followers.pull(userId);
+      await Promise.all([user.save(), targetUser.save()]);
+      return res.json({ message: "UNFOLLOWED SUCCESSFULLY" });
+    }
+
+    // FOLLOW
+    user.following.push(targetUserId);
+    targetUser.followers.push(userId);
+    await Promise.all([user.save(), targetUser.save()]);
+    return res.json({ message: "FOLLOWED SUCCESSFULLY" });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "SERVER ERROR" });
+  }
+};
+
+// END OF FOLLOW/ UNFOLLOE
+
+
+
+
+
+// UPDATE USER BIO
+
+exports.updateUserBio = async (req, res) => {
+  try {
+    const { userId } = req.user;       
+    const { bio } = req.body;        
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "USER NOT FOUND" });
+    }
+
+    user.bio = bio;                    
+    await user.save();
+
+    return res.json({ message: "BIO UPDATED SUCCESSFULLY", bio: user.bio });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "SERVER ERROR" });
+  }
+};
+
+// END OF UPDTAE USER BIO
+
+
+
+
+
+// UPDATE PROFILE PICTURE
+exports.uploadProfilePic = async (req, res) => {
+  try {
+    const { userId } = req.user;
+    const fileUrl = req.file?.path; 
+
+    if (!fileUrl) {
+      return res.status(400).json({ message: "NO FILE UPLOADED" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "USER NOT FOUND" });
+
+    user.profilePic = fileUrl;
+    await user.save();
+
+    res.json({ message: "PROFILE PICTURE UPDATED", profilePic: user.profilePic });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "SERVER ERROR" });
+  }
+};
+
+// END OF UPDATE PROFILE PICTURE
+
+
+
+
+
+
+// module.exports = { registerHandler, loginhandler, fetchUserhandler }
