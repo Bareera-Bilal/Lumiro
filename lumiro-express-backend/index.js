@@ -12,6 +12,7 @@ const {
   registerHandler,
   loginHandler,
   fetchUserHandler,
+  updateUserHandler,
   reportUser,
   toggleFollowUser,
   updateUserBio,
@@ -25,7 +26,7 @@ const {
   reportPost,
   reportComment,
   editComment,
-  replyToComment,
+  replyOnComment,
   uploadStories,
 } = require("./controllers/postControllers");
 
@@ -40,6 +41,8 @@ connectDb();
 
 app.use(bodyParser.json());
 app.use(cors()); // Enables CORS for all routes
+app.use('/uploads', express.static('uploads')) // serve uploaded files
+
 
 // ======================= ROUTES =======================
 
@@ -52,28 +55,36 @@ app.get("/", (req, res) => {
 app.post("/user/register", registerHandler);
 app.post("/user/login", loginHandler);
 app.get("/user/verify", isAuth, fetchUserHandler);
+app.get("/user/verify", isAuth, updateUserHandler);
+
 
 // ---------- User Interaction ----------
-app.post("/user/report", isAuth, reportUser);
-app.post("/user/friends", isAuth, toggleFollowUser);
+app.post("/user/report/:targetId", isAuth, reportUser);
+app.post("/user/friends/:targetId", isAuth, toggleFollowUser);
 
 // ---------- User Profile ----------
 app.put("/user/bio", isAuth, updateUserBio); // Update bio
-app.put("/user/profilepic", isAuth, uploadProfilePic); // Update profile picture
+app.put("/user/profilepic", isAuth, multMid, uploadProfilePic); // Update profile picture
+
+
+
+
+
 
 // ---------- Post Management ----------
-app.post("/posts/create", isAuth, multMid, createPost); // Create post
-app.post("/posts/:id/like", isAuth, likePost); // Like post
-app.post("/posts/:id/report", isAuth, reportPost); // Report post
+app.post("/post/create", isAuth, multMid, createPost); // Create post
+app.post("/post/like/:postId", isAuth, likePost); // Like post
+app.post("/post/report/:postId", isAuth, reportPost)
+
 
 // ---------- Comment Management ----------
-app.post("/posts/:id/comments", isAuth, commentOnPost); // Add comment
-app.post("/comments/:id/report", isAuth, reportComment); // Report comment
-app.put("/comments/:id", isAuth, editComment); // Edit comment
-app.post("/comments/:id/replies", isAuth, replyToComment); // Reply to comment
+app.post("/post/comment/:postId", isAuth, commentOnPost)
+app.post("/post/comment/:postId/report/:commentId", isAuth, reportComment)
+app.put("/post/comment/:postId/edit/:commentId", isAuth, editComment)
+app.post("/post/comment/:postId/reply/:commentId", isAuth, replyOnComment)
 
 // ---------- Stories ----------
-app.post("/stories", isAuth, uploadStories); // Upload story
+app.post("/stories/upload", isAuth, MultMid, uploadStories); // Upload story
 
 // ======================= SERVER LISTEN =======================
 

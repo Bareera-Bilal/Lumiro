@@ -1,5 +1,7 @@
 const { uploadToCloudinary } = require("../config/cloudinary")
-const { Post } = require("../models/post")
+const mongoose = require("mongoose");
+const { Post } = require("../models/post");
+const { User } = require("../models/user");
 
 
 
@@ -8,64 +10,28 @@ const { Post } = require("../models/post")
 // CREATE POST
 
 exports.createPost = async (req, res) => {
-    try {
+  try {
+    const { postCaption } = req.body;
+    const userId = req.user.userId;
 
-        const { postCaption } = req.body
-        const file = req.file.path
+    const post = await Post.create({
+      postPicUrl: req.file?.path || null,
+      postCaption,
+      userId
+    });
 
-        let { userId } = req.userId
+    await User.findByIdAndUpdate(userId, {
+      $push: { posts: { postId: post._id } }
+    });
 
-        const postPicUrl = await uploadToCloudinary(file)
-        const newPost = await new Post({ userId, postCaption, postPicUrl })
+    res.json({ success: true, post });
 
-        await newPost.save()
-
-        return res.status(201).json({ message: "POST CREATED SUCCESSFULLY !" })
-
-    } catch (error) {
-        console.log(error)
-        return res.status(500).json({ message: "SERVER ERROR" })
-
-    }
-}
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
 
 // CREATE POST ENDED
-
-
-
-
-
-
-
-
-
-// LIKE POST
-
-// const likePost = async (res,req) =>
-// {
-
-//     try {
-//         const {postId} = req.query
-//         const {userId} = req.userId
-
-//         let post = await Post.findById(postId)
-
-//         if(post === null){
-//             return res.status(404).json({message:"POST NOT FOUND"})
-//         }
-
-//         const alreadyLiked = post.likes.includes(userId)
-
-//         if(alreadyLiked){
-//            const findIndex = post.likes.indexof(userId)
-//            post.likes.splice(findIndex, 1)
-
-//            return res.json({message:"POST LIKED SUCCESSFULLY"})
-//         }
-//     } catch (error) {
-//         console.log(error)
-//     }
-// }
 
 
 
@@ -74,6 +40,7 @@ exports.createPost = async (req, res) => {
 // LIKE POST WITH ENHANCEMENT OF THE LOGIC IN WHICH POSTID IS ADDED TO LIKESGIVEN ARRAY OF USER
 
 // LIKE POST
+
 exports.likePost = async (req, res) => {
     try {
         const { postId } = req.query;
@@ -130,75 +97,48 @@ exports.likePost = async (req, res) => {
     }
 };
 
-
-
-
-
-// // COMMENT ON POST
-
-// const commentOnPost = async (req, res) => {
-//     try {
-
-//         const {postId} = req.query
-//         const {userId} = req.user
-//         const {text} = req.body
-
-//         let post = await Post.findById(postId)
-
-//         const commentOBJ = {
-//             text : text,
-//             userId : userId
-//         }
-
-//         post.comments.push(commentOBJ)
-
-//         await post.save()
-
-//         return res.json({message : "COMMENTED SUCCESSFULLY"})
-//     } catch (error) {
-//          console.log(error)
-//     }
-// }
-
-
-// COMMENT ON POST WITH ENHANCEMENT OF LOGIC IN WHICH POSTID AND COMMENTID IS ADDED TO COMMENTS GIVEN ARRAY OF USER
+// END OF LIKE POST
 
 
 
 
 
-// REPORT THE POST
+// REPLY THE COMMENT
 
-exports.reportPost = async (req, res) => {
+  exports.replyOnComment = async (req, res) => {
+  try {
+    const { postId, commentId, text } = req.body;
+    const userId = req.user.userId;
 
-    try {
+    const post = await Post.findById(postId);
+    if (!post) return res.status(404).json({ message: "Post not found" });
 
-        const { postId } = req.query
-        const { userId } = req.user
+    const comment = post.comments.id(commentId);
+    if (!comment) return res.status(404).json({ message: "Comment not found" });
 
-        let post = await Post.findById(postId)
-        if (!post) return res.status(404).json({ message: "Post Not found" })
+    const reply = {
+      _id: new mongoose.Types.ObjectId(),
+      userId,
+      text
+    };
 
-        comment.reports.push({
-            user: userId,
-            postId: postId,
-            reportedAt: new Date()
-        });
+    comment.replies.push(reply);
+    await post.save();
 
-        await post.save();
+    res.json({ success: true, reply });
 
-        return res.json({ message: "Post reported successfully!" });
-    } catch (error) {
-        console.error(error);
-        return res.status(500).json({ message: "Server error" });
-    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 };
 
-// END OF REPORT THE POST
+// END OF REPLY THE POST
 
 
 
 
+
+// COMMENT ON POST
 
 exports.commentOnPost = async (req, res) => {
     try {
@@ -336,10 +276,9 @@ exports.editComment = async (req, res) => {
 
 
 
-
 // REPLY TO A COMMENT
 
-exports.replyToComment = async (req, res) => {
+exports.replyOnComment = async (req, res) => {
   try {
     const { commentId } = req.params;   // comment being replied to
     const { text } = req.body;          // reply text

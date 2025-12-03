@@ -59,6 +59,7 @@ exports.registerHandler = async (req, res) => {
 
 
 
+
 // LOGIN HANDLER
 
 exports.loginHandler = async (req, res) => {
@@ -105,6 +106,7 @@ exports.loginHandler = async (req, res) => {
 
 
 
+
 // FETCH USER HANDLER
 
 exports.fetchUserHandler = async (req, res) => {
@@ -130,6 +132,23 @@ exports.fetchUserHandler = async (req, res) => {
 }
 
 // END OF FETCH USER HANDLER
+
+
+
+
+
+//IPDTAE USER HANDLER 
+
+exports.updateUserHandler= async(req, res) =>{
+    try {
+        const updates = req.body
+        const user = await User.findByIdAndUpdate(req.user._id, updates, { new: true }).select('-password')
+        res.json(user)
+    } catch (err) { res.status(500).json({ message: 'server error' }) }
+}
+
+// END OF UPDATE USER HANDLER
+
 
 
 
@@ -196,7 +215,6 @@ exports.reportUser = async (req, res) => {
 };
 
 // END OF REPORT USER
-
 
 
 
@@ -307,5 +325,3 @@ exports.uploadProfilePic = async (req, res) => {
 
 
 
-
-// module.exports = { registerHandler, loginhandler, fetchUserhandler }
